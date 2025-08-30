@@ -1,7 +1,7 @@
 from flask import Flask, render_template_string, redirect, url_for, request,session
 from flask_cors import CORS
 from flask_limiter import Limiter
-from flask_limiter_util import get_remote_address
+from flask_limiter.util import get_remote_address
 import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
