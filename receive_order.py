@@ -12,7 +12,7 @@ def get_ipaddr():
         return request.headers.get("X-Forwarded-For").split(",")[0].strip()
     return request.remote_addr
 
-Talisman(app, content_security_policy=None, force_https=True)
+
 
 limiter = Limiter(
     app=app,
