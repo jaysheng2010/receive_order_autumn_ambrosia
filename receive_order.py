@@ -1,6 +1,7 @@
 from flask import Flask, redirect
 from flask_limiter import Limiter
 from flask_talisman import Talisman
+from flask import request
 
 app = Flask(__name__)
 
@@ -24,8 +25,9 @@ limiter = Limiter(
 @app.route('/')
 def home():
   global i
+  i += 1
   try:
-    html_link = ["https://index-autumn.onrender.com", "https://autumn-ambrosia.pages.dev"]
+    html_links = ["https://index-autumn.onrender.com", "https://autumn-ambrosia.pages.dev"]
 
     return redirect(html_links[i % len(html_links)])
   except:
