@@ -27,7 +27,7 @@ def home():
   global i
   i += 1
   try:
-    html_links = ["https://index-autumn.onrender.com", "https://autumn-ambrosia.pages.dev"]
+    html_links = ["https://autumns-ambrosia-1.pages.dev", "https://autumn-ambrosia.pages.dev"]
 
     return redirect(html_links[i % len(html_links)])
   except:
