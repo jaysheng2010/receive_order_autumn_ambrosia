@@ -20,7 +20,7 @@ from upstash_redis import Redis
 
 
 
-r = Redis(url="https://wealthy-filly-14272.upstash.io", token="ATfAAAIncDJmNGNiYWE4NDAxMGY0NDYyOTA1OWFjMTM3NWIwNzdiMXAyMTQyNzI")
+r = Redis(url="https://holy-sunbird-16995.upstash.io", token="AUJjAAIncDJkYjkxNzFkNDJjYjE0MDM3YjBmNjRhZGE5ZjNlZTQ0ZHAyMTY5OTU")
 
 
 
@@ -28,13 +28,13 @@ r = Redis(url="https://wealthy-filly-14272.upstash.io", token="ATfAAAIncDJmNGNiY
 scope = ['https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive']
 
-creds_json = os.environ.get("service-ambrosia-1")
+creds_json = os.environ.get("autumns-service1")
 creds_dict = json.loads(creds_json)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 # Authorize the client
 client = gspread.authorize(creds)
 
-creds_json2 = os.environ.get("service-ambrosia-3")
+creds_json2 = os.environ.get("autumns-service2")
 creds_dict2 = json.loads(creds_json2)
 creds2 = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict2, scope)
 # Authorize the client
