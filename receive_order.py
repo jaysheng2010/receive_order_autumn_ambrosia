@@ -1,3 +1,4 @@
+
 import secrets
 from markupsafe import escape
 from flask import Flask, render_template, redirect, url_for, request,jsonify
@@ -22,8 +23,6 @@ from upstash_redis import Redis
 
 r = Redis(url="https://holy-sunbird-16995.upstash.io", token="AUJjAAIncDJkYjkxNzFkNDJjYjE0MDM3YjBmNjRhZGE5ZjNlZTQ0ZHAyMTY5OTU")
 
-
-
 # Define scope - what APIs you want to access
 scope = ['https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive']
@@ -34,33 +33,29 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 # Authorize the client
 client = gspread.authorize(creds)
 
-creds_json2 = os.environ.get("autumns-service2")
+"""
+creds_json2 = os.environ.get("service-ambrosia-4")
 creds_dict2 = json.loads(creds_json2)
 creds2 = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict2, scope)
 # Authorize the client
 client2 = gspread.authorize(creds2)
+"""
 
-service_accounts = ["client", "client2"]
+#service_accounts = ["client", "client2"]
 
 # Open your Google Sheet by name
 sheet_customer_cash = client.open('Customer Order').worksheet('table_cash')
 sheet_customer_tng = client.open('Customer Order').worksheet('table_tng')
 
-
+"""
 sheet_customer_cash2 = client2.open('Customer Order').worksheet('table_cash')
 sheet_customer_tng2 = client2.open('Customer Order').worksheet('table_tng')
-
-for sheet in client.openall():
-    print(sheet.title)
-
-for sheet in client2.openall():
-    print(sheet.title)
-
-
+"""
 
 sheet_product = client.open('Official Product Database').worksheet('Products')  
 
 sheet_product_two = client.open('Official Product Database').worksheet('Topping')
+
 
 
 pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -76,10 +71,6 @@ def load_data():
     product_topping_list = sheet_product.col_values(3)[1:]
     topping_list = sheet_product.col_values(4)[1:]
     topping_price = sheet_product_two.get_all_values()
-    print(name_list)
-    print(topping_list)
-    print(price_list)
-    print(topping_price)
 
 load_data()
 
@@ -119,7 +110,8 @@ def check_phone(phone_num):
     if not re.fullmatch(r"\d{10}", phone_num):
         return "<h4>The phone number must be exactly 10 digits.</h4>", None
     return None, phone_num
-        
+
+
 def check_class(userclass):
         if userclass in list_class:
            return None
@@ -175,7 +167,6 @@ product_list = []
 
 for x,y,z in zip(name_list,topping_list,price_list):
     product_list.append([x,y,float(z)])
-    print(product_list)
     
 app.secret_key = secrets.token_urlsafe(16)  # Required for CSRF token signing
 
@@ -190,7 +181,6 @@ csrf = CSRFProtect(app)
 
 #First (Get token)
 @csrf.exempt
-@limiter.limit("50 per hour")
 @app.route("/token")
 def get_token():
     token = secrets.token_urlsafe(16)
@@ -205,22 +195,19 @@ def get_token():
 
 #Token received. Then, frontend sends the order and store the data in memory dictionary 
 @csrf.exempt
-@limiter.limit("50 per hour")
+@limiter.limit("95 per hour")
 @app.route("/submit_order", methods=["POST"])
 def submit_order():
     token = request.args.get("token")
     if not token or not r.exists(token):
-        print("Error")
-        return jsonify({"error": "Invalid token"}), 401
+        return jsonify({"error": "Invalid token. Either the session is expired or deleted. If you have not complete the order confirmation form please go back to our website and try again."}), 401
 
     order_data = request.json.get("order_items")  # frontend sends entire order
     if not order_data:
-        print("Error")
         return jsonify({"error": "Order data required"}), 400
     
     username = request.json.get("username")  # frontend sends entire order
     if not username:
-        print("Error")
         return jsonify({"error": "Username required"}), 400
 
     # Save final order for this token
@@ -235,11 +222,11 @@ def submit_order():
 #After receive success messages, then show the GET 
 @csrf.exempt
 @app.route("/confirm",methods=["GET","POST"])
-@limiter.limit("110 per hour")
+@limiter.limit("95 per hour")
 def confirm():
     token = request.args.get("token")
     if not token or not r.exists(token):
-        return jsonify({"error": "Invalid token"}), 401
+        return jsonify({"error": "Invalid token. Either the session is expired or deleted. If you have not completed the order confirmation form please go back to our website and try again by hitting the place order button again."}), 401
     
     orderdata = r.json.get(token, "$")
     orderdata = orderdata[0]
@@ -251,26 +238,23 @@ def confirm():
     total = 0
 
     for thing in orderdata["order"]:
-                 print(thing[0])
-                 thing[1] = float(thing[1])
-                 print(thing[1])
-                 print(thing[2])
-
+                 thing[1] = int(thing[1])
+                
                  if thing[0] not in name_list:
-                     print(f"name")
                      return f"<h4>We do not have {escape(thing[0])} in our menu</h4>"
                  else:
                      name_index = name_list.index(thing[0])
+
+                 if thing[1] <= 0:
+                     return f"<h4>Selected items must not have the quantity of 0 or lesser.</h4>"
                  
-                 if thing[1] > 40:
-                     print(thing[1])
+                 if thing[1] > 80:
                      return f"<h4>Too many</h4>"
                  
-                 print("Run")
 
                  for x in product_list:
                          if thing[0] == x[0]:
-                             per_price = x[2]
+                             per_price = float(x[2])
                              total_price = per_price*thing[1]
                              break
               
@@ -279,17 +263,13 @@ def confirm():
                          if thing[2] == y[0]:
                            extra_topping_price = float(y[1])*thing[1]
                            total_price += extra_topping_price
-                           print(product_topping_list[name_index].split(", "))
-                           print(total_price)
                            thing.append(total_price)
                            total += total_price
-                           print(f"Amount: {total}")
                          else:
-                                print("Failed")
+                                pass
                  else:
                         return f"<h4>We do not have {escape(thing[2])} in our topping menu</h4>"
     
-    print("Running")
     orderdata["total"] = total
             
     print("TOTAL:", total)
@@ -314,10 +294,13 @@ def confirm():
                         
                 elif payment_method == "cash":
                         try:
+                                """
                            if random.choice(service_accounts) == service_accounts[0]: 
                              sheet_customer_cash.append_row([sanitize_for_sheet(orderdata["customer"]),sanitize_for_sheet(order_summary),sanitize_for_sheet(email),sanitize_for_sheet(userclass),sanitize_for_sheet(phone_num),total])
                            else:
                              sheet_customer_cash2.append_row([sanitize_for_sheet(orderdata["customer"]),sanitize_for_sheet(order_summary),sanitize_for_sheet(email),sanitize_for_sheet(userclass),sanitize_for_sheet(phone_num),total])
+                             """
+                           sheet_customer_cash.append_row([sanitize_for_sheet(orderdata["customer"]),sanitize_for_sheet(order_summary),sanitize_for_sheet(email),sanitize_for_sheet(userclass),sanitize_for_sheet(phone_num),total])
 
                            email_data = {"order": orderdata["order"], "email": email}
                            response = req.post("https://script.google.com/macros/s/AKfycbyOC_-Kn-DxY3FSKrQBMqX_qikVrxz0MwXpEL_KqQnw8-IUPHeAqCWXwnULbbIrILan/exec", json=email_data, headers={'Content-Type':'application/json'})
@@ -327,12 +310,15 @@ def confirm():
                             return f"Error in confirm: {str(e)}" 
                 else:
                         if payment_method == "TNG" and transaction_name is not None:
+                        """
                             try:
                              if random.choice(service_accounts) == service_accounts[0]:
                                   sheet_customer_tng.append_row([sanitize_for_sheet(orderdata["customer"]),sanitize_for_sheet(order_summary),sanitize_for_sheet(email),sanitize_for_sheet(userclass),sanitize_for_sheet(phone_num), sanitize_for_sheet(transaction_name), total])
                              else: 
                                    sheet_customer_tng2.append_row([sanitize_for_sheet(orderdata["customer"]),sanitize_for_sheet(order_summary),sanitize_for_sheet(email),sanitize_for_sheet(userclass),sanitize_for_sheet(phone_num), sanitize_for_sheet(transaction_name), total])
-                                     
+
+                                     """
+                             sheet_customer_tng.append_row([sanitize_for_sheet(orderdata["customer"]),sanitize_for_sheet(order_summary),sanitize_for_sheet(email),sanitize_for_sheet(userclass),sanitize_for_sheet(phone_num), sanitize_for_sheet(transaction_name), total])
                              email_data = {"order": orderdata["order"], "email": email}
                              response = req.post("https://script.google.com/macros/s/AKfycbyOC_-Kn-DxY3FSKrQBMqX_qikVrxz0MwXpEL_KqQnw8-IUPHeAqCWXwnULbbIrILan/exec", json=email_data, headers={'Content-Type':'application/json'})
                              print(response.status_code)
@@ -357,7 +343,6 @@ def wake_up():
    return "w"
 
 @app.route("/reload", methods=["GET"])
-@limiter.limit("50 per hour")
 def reload():
  try:
    load_data()
